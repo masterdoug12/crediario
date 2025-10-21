@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: fiados-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./backend:/var/www/html
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: crediario
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      - db
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    container_name: fiados-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - app
+    volumes:
+      - ./backend:/var/www/html
+
+  db:
+    image: postgres:16-alpine
+    container_name: fiados-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: crediario
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  node:
+    image: node:22-alpine
+    container_name: fiados-node
+    working_dir: /var/www/frontend
+    command: sh -c "npm install && npm run build -- --watch"
+    volumes:
+      - ./frontend:/var/www/frontend
+      - ./backend:/var/www/backend
+    environment:
+      VITE_API_BASE_URL: http://localhost/api
+    depends_on:
+      - app
+
+volumes:
+  postgres_data:
