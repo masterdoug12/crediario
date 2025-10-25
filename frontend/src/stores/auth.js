@@ -5,7 +5,9 @@ const STORAGE_USER_KEY = 'crediario_user';
 
 const state = reactive({
   token: localStorage.getItem(STORAGE_TOKEN_KEY) ?? '',
-  user: JSON.parse(localStorage.getItem(STORAGE_USER_KEY) ?? 'null'),
+  user: '',//JSON.parse(localStorage.getItem(STORAGE_USER_KEY) || "null"),
+  
+
 });
 
 function setAuth({ token, usuario }) {
