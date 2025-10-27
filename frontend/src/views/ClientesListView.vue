@@ -53,14 +53,10 @@ const fetchClientes = async ({ search, letter } = {}) => {
 
     clientes.value = listaClientes;
 
-    if (Array.isArray(data)) {
-      totalDebitos.value = listaClientes.reduce(
-        (acumulado, cliente) => acumulado + Number(cliente.total_debitos ?? cliente.valor_total_debito ?? 0),
-        0,
-      );
-    } else {
-      totalDebitos.value = Number(data?.total_debitos ?? 0);
-    }
+    totalDebitos.value = listaClientes.reduce(
+      (acumulado, cliente) => acumulado + Number(cliente.saldo_atual ?? 0),
+      0,
+    );
   } catch (error) {
     feedback.type = 'danger';
     feedback.message =
@@ -224,7 +220,7 @@ const handleSelectLetter = (letter) => {
         />
 
         <div class="d-flex justify-content-end mb-3">
-          <span class="fw-semibold">Total de débitos: {{ totalDebitosFormatado }}</span>
+          <span class="fw-semibold">Total: {{ totalDebitosFormatado }}</span>
         </div>
 
         <div v-if="feedback.message" :class="`alert alert-${feedback.type}`" role="alert">
