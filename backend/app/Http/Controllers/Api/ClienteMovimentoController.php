@@ -8,9 +8,12 @@ use App\Models\Debito;
 use App\Models\Pagamento;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class ClienteMovimentoController extends Controller
 {
+    private const DEBITO_CATEGORIAS = ['Ferragens', 'PET'];
+
     /**
      * Lista débitos e pagamentos do cliente, ordenados por data desc.
      */
@@ -61,9 +64,12 @@ class ClienteMovimentoController extends Controller
      */
     public function storeDebito(Request $request, Cliente $cliente)
     {
+        $categoriaNormalizada = $this->normalizarCategoria($request->input('tipo'));
+        $request->merge(['tipo' => $categoriaNormalizada]);
+
         $dados = $request->validate([
             'descricao' => ['required', 'string', 'max:255'],
-            'tipo' => ['nullable', 'string', 'max:100'],
+            'tipo' => ['required', Rule::in(self::DEBITO_CATEGORIAS)],
             'valor' => ['required', 'numeric', 'min:0.01'],
             'data' => ['required', 'date'],
         ]);
@@ -110,5 +116,54 @@ class ClienteMovimentoController extends Controller
                 'created_at' => $pagamento->created_at,
             ],
         ], 201);
+    }
+
+    /**
+     * Remove um débito do cliente.
+     */
+    public function destroyDebito(Cliente $cliente, Debito $debito)
+    {
+        if ($debito->cliente_id !== $cliente->id) {
+            abort(404);
+        }
+
+        $debito->delete();
+
+        return response()->json([
+            'mensagem' => 'Débito removido com sucesso.',
+        ]);
+    }
+
+    /**
+     * Remove um pagamento do cliente.
+     */
+    public function destroyPagamento(Cliente $cliente, Pagamento $pagamento)
+    {
+        if ($pagamento->cliente_id !== $cliente->id) {
+            abort(404);
+        }
+
+        $pagamento->delete();
+
+        return response()->json([
+            'mensagem' => 'Pagamento removido com sucesso.',
+        ]);
+    }
+
+    private function normalizarCategoria(?string $valor): ?string
+    {
+        if ($valor === null) {
+            return null;
+        }
+
+        $valorLimpo = trim($valor);
+
+        foreach (self::DEBITO_CATEGORIAS as $categoria) {
+            if (strcasecmp($categoria, $valorLimpo) === 0) {
+                return $categoria;
+            }
+        }
+
+        return $valorLimpo === '' ? null : $valorLimpo;
     }
 }

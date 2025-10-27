@@ -1,7 +1,7 @@
 <script setup>
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '../services/api';
 
@@ -28,9 +28,11 @@ const currency = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 });
 
+const categoriasDebito = ['Ferragens', 'PET'];
+
 const debitoForm = reactive({
   descricao: '',
-  tipo: '',
+  tipo: categoriasDebito[0],
   valor: '',
   data: dayjs().format('YYYY-MM-DD'),
 });
@@ -49,6 +51,7 @@ const savingPagamento = ref(false);
 
 const showDebitoModal = ref(false);
 const showPagamentoModal = ref(false);
+const removendoMovimento = ref(null);
 
 const fetchCliente = async () => {
   loading.value = true;
@@ -81,7 +84,7 @@ const openDebitoModal = () => {
   resetFeedbacks();
   Object.keys(debitoErrors).forEach((key) => delete debitoErrors[key]);
   debitoForm.descricao = '';
-  debitoForm.tipo = '';
+  debitoForm.tipo = categoriasDebito[0];
   debitoForm.valor = '';
   debitoForm.data = dayjs().format('YYYY-MM-DD');
   showDebitoModal.value = true;
@@ -112,7 +115,7 @@ const salvarDebito = async () => {
   try {
     await api.post(`/clientes/${props.id}/debito`, {
       descricao: debitoForm.descricao,
-      tipo: debitoForm.tipo || null,
+      tipo: debitoForm.tipo,
       valor: debitoForm.valor,
       data: debitoForm.data,
     });
@@ -162,9 +165,76 @@ const salvarPagamento = async () => {
 };
 
 const formatDate = (value) => dayjs(value).format('DD/MM/YYYY');
+const debitosPorCategoria = computed(() => {
+  const categoriasPrincipais = categoriasDebito.map((categoria) => ({
+    categoria,
+    itens: [],
+    total: 0,
+  }));
+
+  if (!cliente.value?.debitos?.length) {
+    return categoriasPrincipais;
+  }
+
+  const mapa = Object.fromEntries(
+    categoriasPrincipais.map((grupo) => [grupo.categoria.toLowerCase(), grupo]),
+  );
+  const extras = {
+    categoria: 'Outros',
+    itens: [],
+    total: 0,
+  };
+
+  cliente.value.debitos.forEach((debito) => {
+    const chave = (debito.tipo ?? '').toString().toLowerCase();
+    const grupo = mapa[chave];
+
+    if (!grupo) {
+      extras.itens.push(debito);
+      extras.total += Number(debito.valor ?? 0);
+      return;
+    }
+
+    grupo.itens.push(debito);
+    grupo.total += Number(debito.valor ?? 0);
+  });
+
+  return extras.itens.length > 0 ? [...categoriasPrincipais, extras] : categoriasPrincipais;
+});
 
 const voltarLista = () => {
   router.push({ name: 'clientes', query: route.query });
+};
+
+const excluirMovimento = async (movimento) => {
+  if (
+    !confirm(
+      `Deseja realmente excluir este ${movimento.tipo_movimento === 'debito' ? 'débito' : 'pagamento'}?`,
+    )
+  ) {
+    return;
+  }
+
+  removendoMovimento.value = `${movimento.tipo_movimento}-${movimento.id}`;
+  resetFeedbacks();
+
+  try {
+    if (movimento.tipo_movimento === 'debito') {
+      await api.delete(`/clientes/${props.id}/debitos/${movimento.id}`);
+    } else {
+      await api.delete(`/clientes/${props.id}/pagamentos/${movimento.id}`);
+    }
+
+    feedback.type = 'success';
+    feedback.message = 'Movimento removido com sucesso.';
+    await fetchCliente();
+  } catch (error) {
+    feedback.type = 'danger';
+    feedback.message =
+      error.response?.data?.mensagem ?? 'Não foi possível remover o movimento.';
+  } finally {
+    removendoMovimento.value = null;
+  }
 };
 
 onMounted(() => {
@@ -225,53 +295,38 @@ onMounted(() => {
         {{ feedback.message }}
       </div>
 
-      <div class="row g-4">
-        <div class="col-lg-6">
-          <div class="card border-0 h-100 card-shadow">
-            <div class="card-header bg-white border-bottom-0">
-              <h2 class="h5 mb-0">Débitos</h2>
-            </div>
-            <ul class="list-group list-group-flush">
-              <li v-if="cliente.debitos?.length === 0" class="list-group-item text-muted">
-                Nenhum débito registrado.
-              </li>
-              <li v-for="debito in cliente.debitos" :key="debito.id" class="list-group-item">
-                <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    <div class="fw-semibold">{{ debito.descricao }}</div>
-                    <div class="text-muted-sm">
-                      {{ debito.tipo ?? 'Sem categoria' }} · {{ formatDate(debito.data) }}
-                    </div>
-                  </div>
-                  <span class="badge bg-danger-subtle text-danger fw-semibold">
-                    {{ currency.format(debito.valor) }}
-                  </span>
-                </div>
-              </li>
-            </ul>
-          </div>
+      <div class="card border-0 card-shadow">
+        <div class="card-header bg-white border-bottom-0">
+          <h2 class="h5 mb-0">Débitos por categoria</h2>
         </div>
-        <div class="col-lg-6">
-          <div class="card border-0 h-100 card-shadow">
-            <div class="card-header bg-white border-bottom-0">
-              <h2 class="h5 mb-0">Pagamentos</h2>
-            </div>
-            <ul class="list-group list-group-flush">
-              <li v-if="cliente.pagamentos?.length === 0" class="list-group-item text-muted">
-                Nenhum pagamento registrado.
-              </li>
-              <li v-for="pagamento in cliente.pagamentos" :key="pagamento.id" class="list-group-item">
-                <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    <div class="fw-semibold">{{ pagamento.descricao ?? 'Pagamento realizado' }}</div>
-                    <div class="text-muted-sm">{{ formatDate(pagamento.data) }}</div>
-                  </div>
-                  <span class="badge bg-success-subtle text-success fw-semibold">
-                    {{ currency.format(pagamento.valor) }}
-                  </span>
+        <div class="card-body">
+          <div class="row g-4">
+            <div v-for="grupo in debitosPorCategoria" :key="grupo.categoria" class="col-md-6">
+              <div class="border rounded-3 p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h3 class="h6 mb-0">{{ grupo.categoria }}</h3>
+                  <span class="fw-semibold text-danger">{{ currency.format(grupo.total) }}</span>
                 </div>
-              </li>
-            </ul>
+                <ul class="list-unstyled mb-0">
+                  <li v-if="grupo.itens.length === 0" class="text-muted-sm">
+                    Nenhum débito nesta categoria.
+                  </li>
+                  <li
+                    v-for="debito in grupo.itens"
+                    :key="debito.id"
+                    class="d-flex justify-content-between align-items-center py-1 border-bottom"
+                  >
+                    <div>
+                      <div class="fw-semibold">{{ debito.descricao }}</div>
+                      <div class="text-muted-sm">{{ formatDate(debito.data) }}</div>
+                    </div>
+                    <span class="text-danger fw-semibold">
+                      {{ currency.format(debito.valor) }}
+                    </span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -288,9 +343,9 @@ onMounted(() => {
             <li
               v-for="movimento in movimentos"
               :key="`${movimento.tipo_movimento}-${movimento.id}`"
-              class="list-group-item d-flex justify-content-between align-items-center"
+              class="list-group-item d-flex justify-content-between align-items-center gap-3 flex-wrap"
             >
-              <div>
+              <div class="me-auto">
                 <div class="fw-semibold">
                   {{
                     movimento.tipo_movimento === 'debito'
@@ -315,6 +370,19 @@ onMounted(() => {
               >
                 {{ currency.format(movimento.valor) }}
               </span>
+              <button
+                class="btn btn-sm btn-outline-danger"
+                type="button"
+                :disabled="removendoMovimento === `${movimento.tipo_movimento}-${movimento.id}`"
+                @click="excluirMovimento(movimento)"
+              >
+                <span
+                  v-if="removendoMovimento === `${movimento.tipo_movimento}-${movimento.id}`"
+                  class="spinner-border spinner-border-sm me-2"
+                  role="status"
+                />
+                Excluir
+              </button>
             </li>
           </ul>
         </div>
@@ -345,7 +413,11 @@ onMounted(() => {
               </div>
               <div>
                 <label class="form-label" for="tipoDebito">Tipo ou categoria</label>
-                <input id="tipoDebito" v-model="debitoForm.tipo" class="form-control" type="text" />
+                <select id="tipoDebito" v-model="debitoForm.tipo" class="form-select" required>
+                  <option v-for="categoria in categoriasDebito" :key="categoria" :value="categoria">
+                    {{ categoria }}
+                  </option>
+                </select>
                 <div v-if="debitoErrors.tipo" class="text-danger small mt-1">
                   {{ debitoErrors.tipo[0] }}
                 </div>

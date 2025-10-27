@@ -18,7 +18,7 @@ class DebitoFactory extends Factory
     {
         return [
             'descricao' => $this->faker->sentence(4),
-            'tipo' => $this->faker->optional()->randomElement(['Mercadorias', 'Serviço', 'Taxa']),
+            'tipo' => $this->faker->randomElement(['Ferragens', 'PET']),
             'valor' => $this->faker->randomFloat(2, 20, 500),
             'data' => $this->faker->dateTimeBetween('-3 months', 'now')->format('Y-m-d'),
         ];

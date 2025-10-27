@@ -19,4 +19,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/clientes/{cliente}/movimentos', [ClienteMovimentoController::class, 'index']);
     Route::post('/clientes/{cliente}/debito', [ClienteMovimentoController::class, 'storeDebito']);
     Route::post('/clientes/{cliente}/pagamento', [ClienteMovimentoController::class, 'storePagamento']);
+    Route::delete('/clientes/{cliente}/debitos/{debito}', [ClienteMovimentoController::class, 'destroyDebito']);
+    Route::delete('/clientes/{cliente}/pagamentos/{pagamento}', [ClienteMovimentoController::class, 'destroyPagamento']);
 });
