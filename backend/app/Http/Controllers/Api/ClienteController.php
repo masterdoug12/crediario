@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cliente;
+use App\Models\Debito;
 use Illuminate\Http\Request;
 
 class ClienteController extends Controller
@@ -14,23 +15,43 @@ class ClienteController extends Controller
     public function index(Request $request)
     {
         $busca = $request->string('q')->trim();
+        $letra = $request->string('letra')->trim();
+        $normalizedLetter = $letra->isNotEmpty()
+            ? mb_strtoupper($letra->substr(0, 1)->value())
+            : null;
 
-        $clientes = Cliente::query()
+        $baseQuery = Cliente::query()
             ->when($busca->isNotEmpty(), function ($query) use ($busca) {
                 $query->where(function ($sub) use ($busca) {
                     $sub->where('nome', 'ilike', '%'.$busca.'%')
                         ->orWhere('telefone', 'ilike', '%'.$busca.'%');
                 });
             })
+            ->when($normalizedLetter, function ($query) use ($normalizedLetter) {
+                $query->whereRaw('LOWER(LEFT(nome, 1)) = ?', [mb_strtolower($normalizedLetter)]);
+            })
+            ->orderBy('nome');
+
+        $clientes = (clone $baseQuery)
             ->withSum('debitos as total_debitos', 'valor')
             ->withSum('pagamentos as total_pagamentos', 'valor')
-            ->orderBy('nome')
             ->get()
             ->map(fn (Cliente $cliente) => $this->formatClienteResumo($cliente))
             ->values()
             ->all();
 
-        return response()->json($clientes);
+        $clienteIds = collect($clientes)->pluck('id');
+
+        $totalDebitos = $clienteIds->isEmpty()
+            ? 0
+            : Debito::query()
+                ->whereIn('cliente_id', $clienteIds)
+                ->sum('valor');
+
+        return response()->json([
+            'clientes' => $clientes,
+            'total_debitos' => (float) $totalDebitos,
+        ]);
     }
 
     /**

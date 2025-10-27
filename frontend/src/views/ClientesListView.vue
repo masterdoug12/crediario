@@ -1,7 +1,8 @@
 <script setup>
-import { onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../services/api';
+import FiltroAlfabetico from '../components/FiltroAlfabetico.vue';
 
 const router = useRouter();
 const clientes = ref([]);
@@ -26,16 +27,40 @@ const currency = new Intl.NumberFormat('pt-BR', {
 });
 
 let searchTimeout;
+const filtroStorageKey = 'clientes-filtro-letra';
+const selectedLetter = ref('Todos');
+const totalDebitos = ref(0);
 
-const fetchClientes = async (query = '') => {
+const totalDebitosFormatado = computed(() => currency.format(totalDebitos.value ?? 0));
+
+const fetchClientes = async ({ search, letter } = {}) => {
   loading.value = true;
+  const params = {};
+  const effectiveSearch = typeof search === 'string' ? search : searchTerm.value.trim();
+  const effectiveLetter = typeof letter === 'string' ? letter : selectedLetter.value;
+
+  if (effectiveSearch) {
+    params.q = effectiveSearch;
+  }
+
+  if (effectiveLetter && effectiveLetter !== 'Todos') {
+    params.letra = effectiveLetter;
+  }
 
   try {
-    const { data } = await api.get('/clientes', {
-      params: query ? { q: query } : {},
-    });
+    const { data } = await api.get('/clientes', { params });
+    const listaClientes = Array.isArray(data) ? data : data?.clientes ?? [];
 
-    clientes.value = data;
+    clientes.value = listaClientes;
+
+    if (Array.isArray(data)) {
+      totalDebitos.value = listaClientes.reduce(
+        (acumulado, cliente) => acumulado + Number(cliente.total_debitos ?? cliente.valor_total_debito ?? 0),
+        0,
+      );
+    } else {
+      totalDebitos.value = Number(data?.total_debitos ?? 0);
+    }
   } catch (error) {
     feedback.type = 'danger';
     feedback.message =
@@ -48,7 +73,7 @@ const fetchClientes = async (query = '') => {
 const applySearch = () => {
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
-    fetchClientes(searchTerm.value.trim());
+    fetchClientes({ search: searchTerm.value.trim() });
   }, 400);
 };
 
@@ -97,7 +122,7 @@ const saveCliente = async () => {
       feedback.message = 'Cliente cadastrado com sucesso!';
     }
 
-    await fetchClientes(searchTerm.value.trim());
+    await fetchClientes();
     showForm.value = false;
   } catch (error) {
     if (error.response?.status === 422 && error.response.data.errors) {
@@ -121,7 +146,7 @@ const deleteCliente = async (cliente) => {
     await api.delete(`/clientes/${cliente.id}`);
     feedback.type = 'success';
     feedback.message = 'Cliente removido com sucesso.';
-    await fetchClientes(searchTerm.value.trim());
+    await fetchClientes();
   } catch (error) {
     feedback.type = 'danger';
     feedback.message = error.response?.data?.mensagem ?? 'Não foi possível excluir o cliente.';
@@ -133,12 +158,33 @@ const irParaDetalhes = (cliente) => {
 };
 
 onMounted(() => {
+  if (typeof window !== 'undefined') {
+    const storedLetter = window.localStorage.getItem(filtroStorageKey);
+    if (storedLetter) {
+      selectedLetter.value = storedLetter;
+    }
+  }
+
   fetchClientes();
 });
 
 onUnmounted(() => {
   clearTimeout(searchTimeout);
 });
+
+const handleSelectLetter = (letter) => {
+  selectedLetter.value = letter;
+
+  if (typeof window !== 'undefined') {
+    if (letter === 'Todos') {
+      window.localStorage.removeItem(filtroStorageKey);
+    } else {
+      window.localStorage.setItem(filtroStorageKey, letter);
+    }
+  }
+
+  fetchClientes({ letter });
+};
 </script>
 
 <template>
@@ -169,6 +215,16 @@ onUnmounted(() => {
               @input="applySearch"
             />
           </div>
+        </div>
+
+        <FiltroAlfabetico
+          class="mb-3"
+          :selected-letter="selectedLetter"
+          @select="handleSelectLetter"
+        />
+
+        <div class="d-flex justify-content-end mb-3">
+          <span class="fw-semibold">Total de débitos: {{ totalDebitosFormatado }}</span>
         </div>
 
         <div v-if="feedback.message" :class="`alert alert-${feedback.type}`" role="alert">
