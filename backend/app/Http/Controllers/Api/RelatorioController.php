@@ -37,7 +37,7 @@ class RelatorioController extends Controller
 
         $marcacoes = DB::query()
             ->fromSub($debitos->unionAll($pagamentos), 'marcacoes')
-            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->limit($limit)
             ->get()
             ->map(fn ($row) => [
