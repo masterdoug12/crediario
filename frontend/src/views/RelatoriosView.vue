@@ -7,7 +7,8 @@ import api from '../services/api';
 dayjs.locale('pt-br');
 
 const loading = ref(true);
-const marcacoes = ref([]);
+const debitos = ref([]);
+const pagamentos = ref([]);
 const feedback = reactive({ type: '', message: '' });
 
 const fetchMarcacoes = async () => {
@@ -16,8 +17,9 @@ const fetchMarcacoes = async () => {
   feedback.message = '';
 
   try {
-    const { data } = await api.get('/relatorios/marcacoes', { params: { limit: 10 } });
-    marcacoes.value = Array.isArray(data?.marcacoes) ? data.marcacoes : [];
+    const { data } = await api.get('/relatorios/marcacoes', { params: { limit: 50 } });
+    debitos.value = Array.isArray(data?.debitos) ? data.debitos : [];
+    pagamentos.value = Array.isArray(data?.pagamentos) ? data.pagamentos : [];
   } catch (error) {
     feedback.type = 'danger';
     feedback.message =
@@ -63,46 +65,80 @@ onMounted(() => {
       </div>
     </div>
 
-    <div class="card border-0 card-shadow">
-      <div class="card-header bg-white border-bottom-0">
-        <h2 class="h5 mb-0">Relatório de marcações</h2>
-      </div>
-      <div class="card-body">
-        <div v-if="feedback.message" :class="`alert alert-${feedback.type}`" role="alert">
-          {{ feedback.message }}
-        </div>
+    <div v-if="feedback.message" :class="`alert alert-${feedback.type}`" role="alert">
+      {{ feedback.message }}
+    </div>
 
-        <div class="table-responsive">
-          <table class="table align-middle mb-0">
-            <thead>
-              <tr>
-                <th>Cliente</th>
-                <th>Tipo de marcação</th>
-                <th>Descrição</th>
-                <th class="text-end">Data e hora</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="loading">
-                <td colspan="4" class="text-center py-4">
-                  <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Carregando...</span>
-                  </div>
-                </td>
-              </tr>
-              <tr v-else-if="marcacoes.length === 0">
-                <td colspan="4" class="text-center py-4 text-muted">
-                  Nenhuma marcação encontrada.
-                </td>
-              </tr>
-              <tr v-for="marcacao in marcacoes" :key="`${marcacao.tipo}-${marcacao.id}`">
-                <td class="fw-semibold">{{ marcacao.cliente }}</td>
-                <td>{{ labelTipo(marcacao.tipo) }}</td>
-                <td>{{ marcacao.descricao ?? 'Pagamento' }}</td>
-                <td class="text-end fw-semibold">{{ formatDataHora(marcacao.created_at) }}</td>
-              </tr>
-            </tbody>
-          </table>
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <div class="card border-0 card-shadow h-100">
+          <div class="card-header bg-white border-bottom-0">
+            <h2 class="h5 mb-0">Débitos</h2>
+          </div>
+          <div class="card-body">
+            <div v-if="loading" class="text-center py-4">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+              </div>
+            </div>
+            <div v-else-if="debitos.length === 0" class="text-center py-4 text-muted">
+              Nenhum débito encontrado.
+            </div>
+            <div v-else class="table-responsive">
+              <table class="table align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Descrição</th>
+                    <th class="text-end">Data e hora</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="marcacao in debitos" :key="`debito-${marcacao.id}`">
+                    <td class="fw-semibold">{{ marcacao.cliente }}</td>
+                    <td>{{ marcacao.descricao }}</td>
+                    <td class="text-end fw-semibold">{{ formatDataHora(marcacao.created_at) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="card border-0 card-shadow h-100">
+          <div class="card-header bg-white border-bottom-0">
+            <h2 class="h5 mb-0">Pagamentos</h2>
+          </div>
+          <div class="card-body">
+            <div v-if="loading" class="text-center py-4">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+              </div>
+            </div>
+            <div v-else-if="pagamentos.length === 0" class="text-center py-4 text-muted">
+              Nenhum pagamento encontrado.
+            </div>
+            <div v-else class="table-responsive">
+              <table class="table align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Descrição</th>
+                    <th class="text-end">Data e hora</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="marcacao in pagamentos" :key="`pagamento-${marcacao.id}`">
+                    <td class="fw-semibold">{{ marcacao.cliente }}</td>
+                    <td>{{ marcacao.descricao ?? 'Pagamento' }}</td>
+                    <td class="text-end fw-semibold">{{ formatDataHora(marcacao.created_at) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </div>

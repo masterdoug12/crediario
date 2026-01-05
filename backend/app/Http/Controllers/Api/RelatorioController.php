@@ -12,8 +12,8 @@ class RelatorioController extends Controller
 {
     public function marcacoes(Request $request)
     {
-        $limit = (int) $request->query('limit', 10);
-        $limit = max(1, min($limit, 100));
+        $limit = (int) $request->query('limit', 50);
+        $limit = max(1, min($limit, 200));
 
         $debitos = Debito::query()
             ->join('clientes', 'clientes.id', '=', 'debitos.cliente_id')
@@ -23,7 +23,18 @@ class RelatorioController extends Controller
                 'debitos.descricao',
                 'debitos.created_at',
                 'clientes.nome as cliente_nome',
-            ]);
+            ])
+            ->orderByDesc('debitos.id')
+            ->limit($limit)
+            ->get()
+            ->map(fn ($row) => [
+                'id' => $row->id,
+                'cliente' => $row->cliente_nome,
+                'tipo' => $row->tipo_marcacao,
+                'descricao' => $row->descricao,
+                'created_at' => $row->created_at,
+            ])
+            ->all();
 
         $pagamentos = Pagamento::query()
             ->join('clientes', 'clientes.id', '=', 'pagamentos.cliente_id')
@@ -33,11 +44,8 @@ class RelatorioController extends Controller
                 'pagamentos.descricao',
                 'pagamentos.created_at',
                 'clientes.nome as cliente_nome',
-            ]);
-
-        $marcacoes = DB::query()
-            ->fromSub($debitos->unionAll($pagamentos), 'marcacoes')
-            ->orderByDesc('id')
+            ])
+            ->orderByDesc('pagamentos.id')
             ->limit($limit)
             ->get()
             ->map(fn ($row) => [
@@ -50,7 +58,8 @@ class RelatorioController extends Controller
             ->all();
 
         return response()->json([
-            'marcacoes' => $marcacoes,
+            'debitos' => $debitos,
+            'pagamentos' => $pagamentos,
         ]);
     }
 }
