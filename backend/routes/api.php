@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ClienteController;
 use App\Http\Controllers\Api\ClienteMovimentoController;
+use App\Http\Controllers\Api\RelatorioController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -21,4 +22,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/clientes/{cliente}/pagamento', [ClienteMovimentoController::class, 'storePagamento']);
     Route::delete('/clientes/{cliente}/debitos/{debito}', [ClienteMovimentoController::class, 'destroyDebito']);
     Route::delete('/clientes/{cliente}/pagamentos/{pagamento}', [ClienteMovimentoController::class, 'destroyPagamento']);
+
+    Route::get('/relatorios/marcacoes', [RelatorioController::class, 'marcacoes']);
 });

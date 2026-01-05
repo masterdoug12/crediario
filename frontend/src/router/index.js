@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/auth';
 const LoginView = () => import('../views/LoginView.vue');
 const ClientesListView = () => import('../views/ClientesListView.vue');
 const ClienteDetalheView = () => import('../views/ClienteDetalheView.vue');
+const RelatoriosView = () => import('../views/RelatoriosView.vue');
 
 const router = createRouter({
   history: createWebHistory(),
@@ -29,6 +30,12 @@ const router = createRouter({
       name: 'cliente-detalhes',
       component: ClienteDetalheView,
       props: true,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/relatorios',
+      name: 'relatorios',
+      component: RelatoriosView,
       meta: { requiresAuth: true },
     },
   ],

@@ -33,6 +33,16 @@ const handleLogout = async () => {
 
         <div class="collapse navbar-collapse show justify-content-end">
           <ul class="navbar-nav align-items-center gap-3">
+            <li v-if="isAuthenticated" class="nav-item">
+              <router-link class="nav-link text-white" :to="{ name: 'clientes' }">
+                Clientes
+              </router-link>
+            </li>
+            <li v-if="isAuthenticated" class="nav-item">
+              <router-link class="nav-link text-white" :to="{ name: 'relatorios' }">
+                Relatórios
+              </router-link>
+            </li>
             <li v-if="isAuthenticated" class="nav-item text-white">
               <span class="fw-semibold">Olá, {{ userName }}</span>
             </li>
