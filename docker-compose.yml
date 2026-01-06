@@ -63,5 +63,29 @@ services:
     depends_on:
       - app
 
+  # === NOVO SERVIÇO: n8n ===
+  n8n:
+    build:
+      context: .
+      dockerfile: docker/n8n/Dockerfile
+    container_name: fiados-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"           # UI do n8n
+    environment:
+      # Ajuste o host se quiser acessar de outra máquina
+      N8N_HOST: "localhost"
+      N8N_PORT: 5678
+      N8N_PROTOCOL: "http"
+      # Define timezone para os horários dos workflows
+      GENERIC_TIMEZONE: "America/Sao_Paulo"
+    volumes:
+      - n8n_data:/home/node/.n8n   # dados do n8n (credenciais, workflows)
+      - n8n_tmp:/tmp               # onde salvaremos o dump
+    depends_on:
+      - db                         # garante que o serviço 'db' já esteja na rede
+
 volumes:
   postgres_data:
+  n8n_data:
+  n8n_tmp:
