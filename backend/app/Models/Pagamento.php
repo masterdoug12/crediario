@@ -12,11 +12,13 @@ class Pagamento extends Model
         'valor',
         'data',
         'descricao',
+        'excluido',
     ];
 
     protected $casts = [
         'data' => 'date',
         'valor' => 'decimal:2',
+        'excluido' => 'boolean',
     ];
 
     public function cliente(): BelongsTo

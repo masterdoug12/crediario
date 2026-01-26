@@ -21,6 +21,7 @@ class ClienteMovimentoController extends Controller
     {
         $movimentos = $cliente->debitos()
             ->select('id', 'descricao', 'tipo', 'valor', 'data', 'created_at')
+            ->where('excluido', false)
             ->get()
             ->map(function (Debito $debito) {
                 return [
@@ -35,6 +36,7 @@ class ClienteMovimentoController extends Controller
             })
             ->concat($cliente->pagamentos()
                 ->select('id', 'descricao', 'valor', 'data', 'created_at')
+                ->where('excluido', false)
                 ->get()
                 ->map(function (Pagamento $pagamento) {
                     return [
@@ -127,7 +129,7 @@ class ClienteMovimentoController extends Controller
             abort(404);
         }
 
-        $debito->delete();
+        $debito->update(['excluido' => true]);
 
         return response()->json([
             'mensagem' => 'Débito removido com sucesso.',
@@ -143,7 +145,7 @@ class ClienteMovimentoController extends Controller
             abort(404);
         }
 
-        $pagamento->delete();
+        $pagamento->update(['excluido' => true]);
 
         return response()->json([
             'mensagem' => 'Pagamento removido com sucesso.',

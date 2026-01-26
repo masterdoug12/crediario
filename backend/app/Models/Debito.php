@@ -13,11 +13,13 @@ class Debito extends Model
         'tipo',
         'valor',
         'data',
+        'excluido',
     ];
 
     protected $casts = [
         'data' => 'date',
         'valor' => 'decimal:2',
+        'excluido' => 'boolean',
     ];
 
     public function cliente(): BelongsTo

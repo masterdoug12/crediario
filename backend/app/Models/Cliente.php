@@ -34,8 +34,8 @@ class Cliente extends Model
      */
     public function getSaldoAtualAttribute(): float
     {
-        $totalDebitos = $this->debitos()->sum('valor');
-        $totalPagamentos = $this->pagamentos()->sum('valor');
+        $totalDebitos = $this->debitos()->where('excluido', false)->sum('valor');
+        $totalPagamentos = $this->pagamentos()->where('excluido', false)->sum('valor');
 
         return (float) $totalDebitos - (float) $totalPagamentos;
     }

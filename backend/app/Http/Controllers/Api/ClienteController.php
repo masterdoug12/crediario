@@ -33,8 +33,12 @@ class ClienteController extends Controller
             ->orderBy('nome');
 
         $clientes = (clone $baseQuery)
-            ->withSum('debitos as total_debitos', 'valor')
-            ->withSum('pagamentos as total_pagamentos', 'valor')
+            ->withSum(['debitos as total_debitos' => function ($query) {
+                $query->where('excluido', false);
+            }], 'valor')
+            ->withSum(['pagamentos as total_pagamentos' => function ($query) {
+                $query->where('excluido', false);
+            }], 'valor')
             ->get()
             ->map(fn (Cliente $cliente) => $this->formatClienteResumo($cliente))
             ->values()
@@ -46,6 +50,7 @@ class ClienteController extends Controller
             ? 0
             : Debito::query()
                 ->whereIn('cliente_id', $clienteIds)
+                ->where('excluido', false)
                 ->sum('valor');
 
         return response()->json([
@@ -75,8 +80,12 @@ class ClienteController extends Controller
      */
     public function show(Cliente $cliente)
     {
-        $cliente->loadSum('debitos as total_debitos', 'valor');
-        $cliente->loadSum('pagamentos as total_pagamentos', 'valor');
+        $cliente->loadSum(['debitos as total_debitos' => function ($query) {
+            $query->where('excluido', false);
+        }], 'valor');
+        $cliente->loadSum(['pagamentos as total_pagamentos' => function ($query) {
+            $query->where('excluido', false);
+        }], 'valor');
 
         return response()->json($this->formatClienteDetalhe($cliente));
     }
@@ -93,8 +102,12 @@ class ClienteController extends Controller
         ]);
 
         $cliente->update($dados);
-        $cliente->loadSum('debitos as total_debitos', 'valor');
-        $cliente->loadSum('pagamentos as total_pagamentos', 'valor');
+        $cliente->loadSum(['debitos as total_debitos' => function ($query) {
+            $query->where('excluido', false);
+        }], 'valor');
+        $cliente->loadSum(['pagamentos as total_pagamentos' => function ($query) {
+            $query->where('excluido', false);
+        }], 'valor');
 
         return response()->json($this->formatClienteDetalhe($cliente));
     }
@@ -132,6 +145,7 @@ class ClienteController extends Controller
         $clienteArray = $this->formatClienteResumo($cliente);
         $clienteArray['debitos'] = $cliente->debitos()
             ->orderByDesc('data')
+            ->where('excluido', false)
             ->get(['id', 'descricao', 'tipo', 'valor', 'data', 'created_at'])
             ->map(fn ($debito) => [
                 'id' => $debito->id,
@@ -146,6 +160,7 @@ class ClienteController extends Controller
 
         $clienteArray['pagamentos'] = $cliente->pagamentos()
             ->orderByDesc('data')
+            ->where('excluido', false)
             ->get(['id', 'descricao', 'valor', 'data', 'created_at'])
             ->map(fn ($pagamento) => [
                 'id' => $pagamento->id,
