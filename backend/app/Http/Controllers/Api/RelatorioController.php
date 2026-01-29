@@ -27,7 +27,7 @@ class RelatorioController extends Controller
                 'clientes.nome as cliente_nome',
             ])
             ->where('debitos.excluido', false)
-            ->orderByDesc('debitos.updated_at')
+            ->orderByDesc('debitos.id')
             ->limit($limit)
             ->get()
             ->map(fn ($row) => [
@@ -54,7 +54,7 @@ class RelatorioController extends Controller
                 'clientes.nome as cliente_nome',
             ])
             ->where('debitos.excluido', true)
-            ->orderByDesc('debitos.id')
+            ->orderByDesc('debitos.updated_at')
             ->limit($limit)
             ->get()
             ->map(fn ($row) => [
@@ -80,7 +80,7 @@ class RelatorioController extends Controller
                 'clientes.nome as cliente_nome',
             ])
             ->where('pagamentos.excluido', false)
-            ->orderByDesc('pagamentos.updated_at')
+            ->orderByDesc('pagamentos.id')
             ->limit($limit)
             ->get()
             ->map(fn ($row) => [
@@ -105,7 +105,7 @@ class RelatorioController extends Controller
                 'clientes.nome as cliente_nome',
             ])
             ->where('pagamentos.excluido', true)
-            ->orderByDesc('pagamentos.id')
+            ->orderByDesc('pagamentos.updated_at')
             ->limit($limit)
             ->get()
             ->map(fn ($row) => [
